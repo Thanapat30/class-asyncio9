@@ -9,7 +9,6 @@ import os
 
 student_id = "6310301030"
 
-
 class MachineStatus():
     def __init__(self) -> None:
         self.fulldetect = 0
