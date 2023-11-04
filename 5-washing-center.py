@@ -4,8 +4,8 @@ import json
 import asyncio
 import aiomqtt
 from enum import Enum
-import os
 import sys
+import os
 
 student_id = "6310301030"
 
@@ -160,7 +160,7 @@ async def listen(w, client):
                 w.event.set()
 
 async def main():
-    machines = 10
+    machines = 5
     wl = [WashingMachine(serial=f'SN-00{n}') for n in range(1,machines+1)]
     async with aiomqtt.Client("broker.hivemq.com") as client:
         l = [listen(w, client) for w in wl]
@@ -173,4 +173,5 @@ if sys.platform.lower() == "win32" or os.name.lower() == "nt":
     from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
     set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 # Run your async application as usual
+
 asyncio.run(main())

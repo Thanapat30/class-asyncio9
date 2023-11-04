@@ -21,30 +21,35 @@ S_SPIN = "SPIN"
 S_WASH = "WASH"
 S_FAULT = "FAULT"
 S_CLEARFAULT = "CLEAR"
+        
+
+async def publish_message(serial, client, app, action, name, value):
+    print(f"{time.ctime()} - PUBLISH [{serial}] {name}:{value}")
+    await asyncio.sleep(2)
+    payload = {
+                "action"    : "get",
+                "project"   : student_id,
+                "model"     : "model-01",
+                "serial"    : serial,
+                "name"      : name,
+                "value"     : value
+            }
+    print(f"{time.ctime()} - PUBLISH - [{serial}] - {payload['name']} > {payload['value']}")
+    await client.publish(f"v1cdti/{app}/{action}/{student_id}/model-01/{serial}"
+                        , payload=json.dumps(payload))
 
 async def monitor(client):
     while True:
         await asyncio.sleep(10)
         payload = {
-            "action": "get",
-            "project": student_id,
-            "model": "model-01",
-        }
-        print(f"{time.ctime()} GET ALL MACHINE STATUS")
-        await client.publish(f"v1cdti/app/get/{student_id}/model-01/", payload=json.dumps(payload))
-async def publish_message(serial, client, app, action, name, value):
-    print(f"{time.ctime()}  PUBLISH [{serial}] {name}:{value}")
-    await asyncio.sleep(2)
-    payload = {
-        "action": "get",
-        "project": student_id,
-        "model": "model-01",
-        "serial": serial,
-        "name": name,
-        "value": value
-    }
-    print(f"{time.ctime()} PUBLISH  [{serial}] - {payload['name']} > {payload['value']}")
-    await client.publish(f"v1cdti/{app}/{action}/{student_id}/model-01/{serial}", payload=json.dumps(payload))
+                    "action"    : "get",
+                    "project"   : student_id,
+                    "model"     : "model-01",
+
+                }
+        print(f"{time.ctime()} - PUBLISH - GET ALL MACHINE STATUS")
+        await client.publish(f"v1cdti/app/get/{student_id}/model-01/"
+                            , payload=json.dumps(payload))
 
 async def listen(client):
     async with client.messages() as messages:
@@ -53,27 +58,31 @@ async def listen(client):
         await client.subscribe(f"v1cdti/hw/get/{student_id}/model-01/+")
         async for message in messages:
             mgs_decode = json.loads(message.payload)
-            
+            # print(mgs_decode)
             if message.topic.matches(f"v1cdti/hw/get/{student_id}/model-01/+"):
                 print(f"{time.ctime()} FROM MQTT: [{mgs_decode['serial']} {mgs_decode['name']} {mgs_decode['value']}]")
 
-                if mgs_decode['name'] == S_FAULT:
+                if (mgs_decode['name'] == S_FAULT):
                     await publish_message(mgs_decode['serial'], client, 'hw', 'set', "STATUS", S_CLEARFAULT)
-
-                if mgs_decode['name'] == "STATUS" and mgs_decode['value'] == S_OFF:
+                
+                if (mgs_decode['name'] == "STATUS" and mgs_decode['value']==S_OFF):
                     await publish_message(mgs_decode['serial'], client, 'hw', 'set', "STATUS", S_READY)
-
-                if mgs_decode['name'] == "STATUS" and mgs_decode['value'] == S_FILLING:
+                
+                if (mgs_decode['name'] == "STATUS" and mgs_decode['value']==S_FILLING):
                     await asyncio.sleep(2)
                     await publish_message(mgs_decode['serial'], client, 'hw', 'set', "WATERLEVEL", S_FULLLEVEL)
-
-                if mgs_decode['name'] == "STATUS" and mgs_decode['value'] == S_HEATING:
+                
+                if (mgs_decode['name'] == "STATUS" and mgs_decode['value']==S_HEATING):
                     await asyncio.sleep(2)
                     await publish_message(mgs_decode['serial'], client, 'hw', 'set', "TEMPERATURE", S_TEMPERATURE)
-
+                      
+                
 async def main():
-    async with aiomqtt.Client("broker.hivemq.com") as client:
-        await asyncio.gather(listen(client), monitor(client))
+    async with aiomqtt.Client("test.mosquitto.org") as client:
+       await asyncio.gather(listen(client), monitor(client))
+    
+    
+
 
 # Change to the "Selector" event loop if platform is Windows
 if sys.platform.lower() == "win32" or os.name.lower() == "nt":
